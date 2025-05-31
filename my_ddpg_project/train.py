@@ -1,9 +1,24 @@
 import os
 import gymnasium as gym
 import panda_mujoco_gym
+import random
+
+# Set up your experiment settings
+env_id = "FrankaPickAndPlaceSparse-v0"
+exp_name = "DDPG_with_FR3_env"
+total_timesteps = 1_000_000
+seed = 1
+
+cmd = (
+    f"python3 ddpg_continuous_action.py "
+    f"--env-id {env_id} "
+    f"--total-timesteps {total_timesteps} "
+    f"--seed {seed} "
+    f"--cuda "
+)
 
 
-# Choose your environment ID (check your panda_mujoco_gym/envs/__init__.py)
-env_id = "FrankaPickAndPlaceSparse-v0"  # or "PickAndPlace-v0", etc.
 
-os.system(f"python ddpg_continuous_action.py --env-id {env_id} --total-timesteps 1000000")
+print("Launching experiment with command:")
+print(cmd)
+os.system(cmd)
