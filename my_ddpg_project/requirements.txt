@@ -1,8 +1,0 @@
-cleanrl
-mujoco
-gym
-numpy
-torch
-tyro
-poetry
-# pip install "stable-baselines3==2.0.0a1"
