@@ -1,6 +1,7 @@
 .vscode
 .history
 .pytest_cache
+.DS_store
 *__pycache__
 trained_model/
 test_model/
