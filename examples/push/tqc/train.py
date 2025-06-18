@@ -16,17 +16,5 @@ model = TQC(
     tensorboard_log="./examples/push/tqc/logs",
     policy_kwargs=policy_kwargs
 )
-model.learn(total_timesteps=10_000, log_interval=4)
+model.learn(total_timesteps=250_000, log_interval=4)
 model.save("tqc_push")
-
-# del model
-
-# model = TQC.load("tqc_push")
-
-# obs, _ = env.reset()
-# while True:
-#     action, _states = model.predict(obs, deterministic=True)
-#     obs, reward, terminated, truncated, info = env.step(action)
-#     env.render()
-#     if terminated or truncated:
-#         obs, _ = env.reset()
