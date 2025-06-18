@@ -23,6 +23,7 @@ There is still a lot of work to be done on this repo, so please feel free to rai
 </div>
 
 ## Installation
+Create a virtual environment for python 3.10
 
 All essential libraries with corresponding versions are listed in [`requirements.txt`](requirements.txt).
 
