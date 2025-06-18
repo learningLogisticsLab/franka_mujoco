@@ -1,4 +1,5 @@
 mujoco==2.3.3
 gymnasium==0.29.1
 gymnasium-robotics==1.2.2
-stable-baselines3==2.2.1
+sb3_contrib==2.4.0
+tensorboard==2.19
