@@ -11,6 +11,7 @@ from stable_baselines3.common.noise import NormalActionNoise
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv, VecVideoRecorder
 from stable_baselines3.common.callbacks import EvalCallback, StopTrainingOnNoModelImprovement
+from stable_baselines3.common.utils import set_random_seed
 from stable_baselines3.common.logger import configure
 
 # === Config ===
@@ -27,16 +28,17 @@ N_ENVS = 4  # number of parallel environments for training
 os.makedirs(VIDEO_FOLDER, exist_ok=True)
 
 # === Vectorized Training Environment ===
-def make_train_env(rank: int, base_seed: int = 0):
+def make_train_env(rank: int, seed: int = 0):
     def _init():
         env = gym.make(ENV_ID)
         env = Monitor(env)
-        env.reset(seed=base_seed + rank)  # Set different seed per env
+        env.reset(seed=seed + rank)  # Set different seed per env
         return env
+    set_random_seed(seed)
     return _init
 
 # Initializes parallel training environments with different seeds
-train_env = SubprocVecEnv([make_train_env(i, base_seed=42) for i in range(N_ENVS)])
+vec_train_env = SubprocVecEnv([make_train_env(i, base_seed=42) for i in range(N_ENVS)])
 
 # === Single Evaluation Environment (Vec + Video) ===
 def make_eval_env():
@@ -60,13 +62,13 @@ eval_env = VecVideoRecorder(
 new_logger = configure(LOG_DIR, ["stdout", "tensorboard"])
 
 # === Action Noise ===
-n_actions = train_env.action_space.shape[0]
+n_actions = vec_train_env.action_space.shape[0]
 action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
 
 # === Define Model ===
 model = SAC(
     policy="MultiInputPolicy",
-    env=train_env,
+    env=vec_train_env,
     replay_buffer_class=HerReplayBuffer,
     replay_buffer_kwargs=dict(
         n_sampled_goal=4,
@@ -74,6 +76,7 @@ model = SAC(
         online_sampling=True,
         max_episode_length=MAX_EPISODE_LENGTH,
     ),
+    gradient_steps=-1,
     verbose=1,
     seed=0,
     action_noise=action_noise,

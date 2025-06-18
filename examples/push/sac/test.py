@@ -1,6 +1,6 @@
 import gymnasium as gym
 from panda_mujoco_gym.envs.push import FrankaPushEnv
-from stable_baselines3 import HerReplayBuffer, SAC
+from stable_baselines3 import SAC
 
 # reload environment and model
 env = gym.make("FrankaPushSparse-v0", render_mode="human")
