@@ -1,0 +1,3 @@
+[submodule "FR3_env"]
+	path = FR3_env
+	url = https://github.com/CleiverRuiz-LU/FR3_env.git
