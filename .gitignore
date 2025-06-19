@@ -2,6 +2,7 @@
 .history
 .pytest_cache
 .DS_Store
+.zip
 *__pycache__
 trained_model/
 test_model/
