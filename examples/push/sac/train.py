@@ -23,6 +23,7 @@ model = SAC(
 )
 
 # set step count and learn. Then save model.
-step_count = 1_000_000
+step_count = 2_000
 model.learn(step_count)
 model.save(f"examples/push/sac/sac_her_push_1M")
+
