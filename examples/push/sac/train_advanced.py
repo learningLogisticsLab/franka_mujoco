@@ -1,4 +1,8 @@
 # Updated and advanced train.py that includes logging, vectorized environments, and periodic recorded evaluations
+import sys
+
+# sys.path.insert(1, "../../../panda_mujoco_gym")  # Adjust path to include the panda_mujoco_gym package
+
 import os
 import numpy as np
 import gymnasium as gym
@@ -7,6 +11,7 @@ from panda_mujoco_gym.envs.push import FrankaPushEnv
 
 from stable_baselines3 import SAC
 from stable_baselines3.her import HerReplayBuffer
+from stable_baselines3.her.goal_selection_strategy import GoalSelectionStrategy
 from stable_baselines3.common.noise import NormalActionNoise
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv, VecVideoRecorder
@@ -19,7 +24,7 @@ ENV_ID = "FrankaPushSparse-v0"
 TOTAL_TIMESTEPS = 500_000
 EVAL_FREQ = 10_000
 N_EVAL_EPISODES = 5
-MAX_EPISODE_LENGTH = 50
+MAX_EPISODE_LENGTH = 500
 LOG_DIR = "./logs/franka_slide"
 VIDEO_FOLDER = os.path.join(LOG_DIR, "videos")
 BEST_MODEL_PATH = os.path.join(LOG_DIR, "best_model")
@@ -73,11 +78,10 @@ def main():
         env=vec_train_env,
         replay_buffer_class=HerReplayBuffer,
         replay_buffer_kwargs=dict(
-            n_sampled_goal=4,
-            goal_selection_strategy="future",
-            online_sampling=True,
-            max_episode_length=MAX_EPISODE_LENGTH,
+            goal_selection_strategy=GoalSelectionStrategy.FUTURE,
+            copy_info_dict=False,
         ),
+        learning_starts=MAX_EPISODE_LENGTH,     # ← wait until at least one episode is in the buffer
         gradient_steps=-1,
         verbose=1,
         seed=0,
