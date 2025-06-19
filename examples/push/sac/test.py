@@ -4,7 +4,7 @@ from stable_baselines3 import HerReplayBuffer, SAC
 
 # reload environment and model
 env = gym.make("FrankaPushSparse-v0", render_mode="human")
-model = SAC.load('sac_her_push_1k', env=env)
+model = SAC.load('examples/push/sac/sac_her_push_1M', env=env)
 
 # reset
 obs, _ = env.reset()
