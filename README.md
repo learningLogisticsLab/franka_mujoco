@@ -23,9 +23,17 @@ There is still a lot of work to be done on this repo, so please feel free to rai
 </div>
 
 ## Installation
-Create a virtual environment for python 3.10
+Create a virtual environment for python 3.10:
+```
+conda create --name fm_env python==3.10
+```
 
-All essential libraries with corresponding versions are listed in [`requirements.txt`](requirements.txt).
+And now set python interpreter paths and install dependencies
+```
+cd franka_mujoco
+pip install -e .
+pip install -r requirements.txt
+```
 
 ## Test
 
