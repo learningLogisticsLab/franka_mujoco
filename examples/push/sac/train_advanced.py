@@ -115,7 +115,7 @@ def main():
         ),
 
         # training hyper-params
-        learning_starts=MAX_EPISODE_STEPS,     # ← wait until at least one episode is in the buffer
+        learning_starts=MAX_EPISODE_STEPS*N_ENVS,     # ← wait until at least one episode is in the buffer: max_steps*num_envs
         batch_size=1024,
         train_freq=(1, "step"),
         gradient_steps=N_ENVS,                            # ← keeps updates decorrelated in vec setting
