@@ -20,17 +20,22 @@ from stable_baselines3.common.logger import configure
 # ----------  CONFIG  ----------
 ENV_ID = "FrankaPushSparse-v0"
 
+SEED = 42
 TOTAL_TIMESTEPS = 10_000
-EVAL_FREQ = 1_000
-N_EVAL_EPISODES = 5
 MAX_EPISODE_STEPS = 75
 
+# Eval
+EVAL_FREQ = 25_000
+N_EVAL_EPISODES = 15
+
+# Logs
 LOG_DIR = "./logs/franka_push_vec"
 VIDEO_FOLDER = os.path.join(LOG_DIR, "videos")
-
 BEST_MODEL_PATH = os.path.join(LOG_DIR, "best_model")
+
+# Vectorization
 N_ENVS = 19  # number of parallel environments for training
-SEED = 42
+
 # --------------------------------
 
 # --------  HELPERS  ------------
