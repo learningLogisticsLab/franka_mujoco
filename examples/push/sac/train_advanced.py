@@ -21,7 +21,7 @@ from stable_baselines3.common.logger import configure
 ENV_ID = "FrankaPushSparse-v0"
 
 SEED = 42
-TOTAL_TIMESTEPS = 10_000
+TOTAL_TIMESTEPS = 500_000
 MAX_EPISODE_STEPS = 75
 
 # Eval
