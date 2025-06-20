@@ -1,13 +1,11 @@
 # Updated and advanced train.py that includes logging, vectorized environments, and periodic recorded evaluations
-import sys
-
-# sys.path.insert(1, "../../../panda_mujoco_gym")  # Adjust path to include the panda_mujoco_gym package
-
 import os
 import numpy as np
+
 import gymnasium as gym
 
 from panda_mujoco_gym.envs.push import FrankaPushEnv
+from gymnasium.wrappers import TimeLimit, RecordEpisodeStatistics
 
 from stable_baselines3 import SAC
 from stable_baselines3.her import HerReplayBuffer
@@ -19,49 +17,74 @@ from stable_baselines3.common.callbacks import EvalCallback, StopTrainingOnNoMod
 from stable_baselines3.common.utils import set_random_seed
 from stable_baselines3.common.logger import configure
 
-# === Config ===
+# ----------  CONFIG  ----------
 ENV_ID = "FrankaPushSparse-v0"
-TOTAL_TIMESTEPS = 500_000
-EVAL_FREQ = 10_000
+
+TOTAL_TIMESTEPS = 10_000
+EVAL_FREQ = 1_000
 N_EVAL_EPISODES = 5
-MAX_EPISODE_LENGTH = 500
-LOG_DIR = "./logs/franka_slide"
+MAX_EPISODE_STEPS = 75
+
+LOG_DIR = "./logs/franka_push_vec"
 VIDEO_FOLDER = os.path.join(LOG_DIR, "videos")
+
 BEST_MODEL_PATH = os.path.join(LOG_DIR, "best_model")
-N_ENVS = 4  # number of parallel environments for training
+N_ENVS = 19  # number of parallel environments for training
+SEED = 42
+# --------------------------------
 
-os.makedirs(VIDEO_FOLDER, exist_ok=True)
-
+# --------  HELPERS  ------------
 # === Vectorized Training Environment ===
-def make_train_env(rank: int, seed: int = 0):
+def make_env(rank: int, seed: int = 0, render: bool = False):
+    """
+    Returns a thunk for vec env creation.
+    Each env is:
+      - Time-limited     (needed for HER relabelling)
+      - RecordEpisodeStatistics (keeps ep-return/length per env)
+      - Monitor          (with handle_timeout_termination=True)
+    """
     def _init():
-        env = gym.make(ENV_ID)
+        env = gym.make(
+            ENV_ID,
+            render_mode="rgb_array" if render else None,
+        )
+
+        # ---- Per-environment wrappers --- #
+        # In vec envs -> critical to guarantee per-env episode boundaries for correct relabeling in HER.
+        env = TimeLimit(env, max_episode_steps=MAX_EPISODE_STEPS)
+
+        # Collect per-env episode statistics
+        env = RecordEpisodeStatistics(env)
+
+        # Adavned eval statistics
         env = Monitor(env)
-        env.reset(seed=seed + rank)  # Set different seed per env
+
+        # Different seed per each worker
+        env.reset(seed=seed + rank)
+        
         return env
+    
     set_random_seed(seed)
+
     return _init
 
-# === Single Evaluation Environment (Vec + Video) ===
-def make_eval_env():
-    def _init():
-        env = gym.make(ENV_ID, render_mode="rgb_array")
-        env = Monitor(env)
-        return env
-    return _init
 
 def main():
 
+    # Create log environments
+    os.makedirs(LOG_DIR, exist_ok=True)
+    os.makedirs(VIDEO_FOLDER, exist_ok=True)
+    
     # Initializes parallel training environments with different seeds
-    vec_train_env = SubprocVecEnv([make_train_env(i, seed=42) for i in range(N_ENVS)])
+    vec_train_env = SubprocVecEnv([make_env(i, seed=42) for i in range(N_ENVS)])
 
     # Only 1 env for video recording
-    eval_env = DummyVecEnv([make_eval_env()])
+    eval_env = DummyVecEnv([make_env(rank=0, seed=SEED + 10, render=True)])
     eval_env = VecVideoRecorder(
         eval_env,
         VIDEO_FOLDER,
         record_video_trigger=lambda step: step % EVAL_FREQ == 0,
-        video_length=MAX_EPISODE_LENGTH,
+        video_length=MAX_EPISODE_STEPS,
         name_prefix="eval-video"
     )
 
@@ -70,24 +93,32 @@ def main():
 
     # === Action Noise ===
     n_actions = vec_train_env.action_space.shape[0]
-    action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
+    action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.01 * np.ones(n_actions))
 
     # === Define Model ===
     model = SAC(
         policy="MultiInputPolicy",
         env=vec_train_env,
-        replay_buffer_class=HerReplayBuffer,
-        replay_buffer_kwargs=dict(
-            goal_selection_strategy=GoalSelectionStrategy.FUTURE,
-            copy_info_dict=False,
+        replay_buffer_class = HerReplayBuffer,
+        replay_buffer_kwargs = dict(
+            n_sampled_goal = 8, 
+            goal_selection_strategy = GoalSelectionStrategy.FUTURE,
+
+            # Store full `info` dict w e/ transition.
+            # HER only needs`"is_success" flag (and the dict in your case is empty beyond that). | **Keep False**. Comes at cost of mem without improved.
+            copy_info_dict = False,
         ),
-        learning_starts=MAX_EPISODE_LENGTH,     # ← wait until at least one episode is in the buffer
-        gradient_steps=-1,
-        verbose=1,
-        seed=0,
-        action_noise=action_noise,
-        batch_size=256,
+
+        # training hyper-params
+        learning_starts=MAX_EPISODE_STEPS,     # ← wait until at least one episode is in the buffer
+        batch_size=1024,
+        train_freq=(1, "step"),
+        gradient_steps=N_ENVS,                            # ← keeps updates decorrelated in vec setting
+        gamma = 0.98,
         learning_rate=1e-3,
+        action_noise=action_noise,
+        verbose=1,
+        seed=SEED,
         tensorboard_log=LOG_DIR,
     )
     model.set_logger(new_logger)
@@ -101,21 +132,25 @@ def main():
 
     eval_callback = EvalCallback(
         eval_env,
-        callback_on_new_best=callback_on_best,
-        best_model_save_path=BEST_MODEL_PATH,
-        log_path=LOG_DIR,
         eval_freq=EVAL_FREQ,
+        n_eval_episodes=N_EVAL_EPISODES,
         deterministic=True,
         render=False,
-        n_eval_episodes=N_EVAL_EPISODES,
+        best_model_save_path=BEST_MODEL_PATH,
+        callback_on_new_best=callback_on_best,
+        log_path=LOG_DIR,                              
         verbose=1,
     )
 
     # === Train ===
-    model.learn(total_timesteps=TOTAL_TIMESTEPS, callback=eval_callback)
+    model.learn(total_timesteps=TOTAL_TIMESTEPS, callback=eval_callback, progress_bar=True)
 
     # === Save Final Model ===
     model.save(os.path.join(LOG_DIR, "final_model"))
+
+    # ----------  CLEAN-UP ----------
+    vec_train_env.close()
+    eval_env.close()    
 
 if __name__ == "__main__":
     main()

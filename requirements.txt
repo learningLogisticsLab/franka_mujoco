@@ -2,6 +2,8 @@ mujoco==2.3.3
 gymnasium==0.29.1
 gymnasium[other]==0.29.1
 gymnasium-robotics==1.2.2
-stable-baselines3==2.4.0
+stable-baselines3[extra]==2.4.0
 sb3_contrib==2.4.0
 tensorboard==2.19
+rich==13.3.1
+
