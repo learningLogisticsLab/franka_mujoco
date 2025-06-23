@@ -1,6 +1,7 @@
 # Updated and advanced train.py that includes logging, vectorized environments, and periodic recorded evaluations
 import os
 import numpy as np
+from datetime import datetime
 
 import gymnasium as gym
 
@@ -23,18 +24,19 @@ ENV_ID = "FrankaPushSparse-v0"
 SEED = 42
 TOTAL_TIMESTEPS = 500_000
 MAX_EPISODE_STEPS = 75
+DATETIME = datetime.now()
 
 # Eval
 EVAL_FREQ = 25_000
 N_EVAL_EPISODES = 15
 
 # Logs
-LOG_DIR = "./logs/franka_push_vec"
+LOG_DIR = f"/home/student/data/franka_baselines/push/SAC/franka_push_sac_{DATETIME.strftime("%Y-%m-%d_%H:%M:%S")}"
 VIDEO_FOLDER = os.path.join(LOG_DIR, "videos")
 BEST_MODEL_PATH = os.path.join(LOG_DIR, "best_model")
 
 # Vectorization
-N_ENVS = 19  # number of parallel environments for training
+N_ENVS = 10  # number of parallel environments for training
 
 # --------------------------------
 
@@ -85,13 +87,13 @@ def main():
 
     # Only 1 env for video recording
     eval_env = DummyVecEnv([make_env(rank=0, seed=SEED + 10, render=True)])
-    eval_env = VecVideoRecorder(
-        eval_env,
-        VIDEO_FOLDER,
-        record_video_trigger=lambda step: step % EVAL_FREQ == 0,
-        video_length=MAX_EPISODE_STEPS,
-        name_prefix="eval-video"
-    )
+    #eval_env = VecVideoRecorder(
+    #    eval_env,
+    #    VIDEO_FOLDER,
+    #    record_video_trigger=lambda step: step % EVAL_FREQ == 0,
+    #    video_length=MAX_EPISODE_STEPS,
+    #    name_prefix="eval-video"
+    #)
 
     # === Logger ===
     new_logger = configure(LOG_DIR, ["stdout", "tensorboard"])
@@ -116,7 +118,7 @@ def main():
 
         # training hyper-params
         learning_starts=MAX_EPISODE_STEPS*N_ENVS,     # ← wait until at least one episode is in the buffer: max_steps*num_envs
-        batch_size=1024,
+        batch_size=256*N_ENVS,
         train_freq=(1, "step"),
         gradient_steps=N_ENVS,                            # ← keeps updates decorrelated in vec setting
         gamma = 0.98,
