@@ -117,4 +117,5 @@ model.learn(total_timesteps=TOTAL_TIMESTEPS, callback=eval_callback, progress_ba
 model.save(os.path.join(LOG_DIR, "final_model"))
 
 # ----------  CLEAN-UP ----------
-env.close()
+train_env.close()
+eval_env.close()
