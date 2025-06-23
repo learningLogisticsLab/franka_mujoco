@@ -39,18 +39,18 @@ TOTAL_TIMESTEPS = 500_000
 MAX_EPISODE_STEPS = 75
 DATETIME = datetime.now()
 
+# Vectorization
+N_ENVS = 10 # number of parallel environments for training
+
 # Eval
-EVAL_FREQ = 25_000
+DESIRED_EVAL_FREQ = 25_000
+EVAL_FREQ = DESIRED_EVAL_FREQ // N_ENVS
 N_EVAL_EPISODES = 15
 
 # Logs
-LOG_DIR = f"/home/student/data/franka_baselines/push/SAC/franka_push_sac_norm{DATETIME.strftime('%Y-%m-%d_%H:%M:%S')}"
+LOG_DIR = f"/home/student/data/franka_baselines/push/SAC/franka_push_sac_{DATETIME.strftime('%Y-%m-%d_%H:%M:%S')}"
 VIDEO_FOLDER = os.path.join(LOG_DIR, "videos")
 BEST_MODEL_PATH = os.path.join(LOG_DIR, "best_model")
-
-# Vectorization
-N_ENVS = 10  # number of parallel environments for training
-
 # --------------------------------
 
 # --------  HELPERS  ------------
@@ -73,6 +73,9 @@ def make_env(rank: int, seed: int = 0, render: bool = False):
         # In vec envs -> critical to guarantee per-env episode boundaries for correct relabeling in HER.
         env = TimeLimit(env, max_episode_steps=MAX_EPISODE_STEPS)
 
+        # Collect per-env episode statistics  env = RecordEpisodeStatistics(env)
+
+        # Adavned eval stat        env = Monitor(env)
         # Different seed per each worker
         env.reset(seed=seed + rank)
         
@@ -95,15 +98,6 @@ def main():
 
     # Only 1 env for video recording
     eval_env = DummyVecEnv([make_env(rank=0, seed=SEED + 10, render=True)])
-<<<<<<< HEAD
-    #eval_env = VecVideoRecorder(
-    #    eval_env,
-    #    VIDEO_FOLDER,
-    #    record_video_trigger=lambda step: step % EVAL_FREQ == 0,
-    #    video_length=MAX_EPISODE_STEPS,
-    #    name_prefix="eval-video"
-    #)
-=======
 
     # Eval env needs VecNormalize if train used it to keep same scale. Do not use these results to change train statistics, hence set training=False.
     eval_env = VecNormalize(eval_env, norm_obs=True, norm_reward=False, training=False)
@@ -121,7 +115,6 @@ def main():
     #     video_length=MAX_EPISODE_STEPS,
     #     name_prefix="eval-video"
     # )
->>>>>>> 7545712d51e3cb13058cefb518f17c076d0831cc
 
     # === Logger ===
     new_logger = configure(LOG_DIR, ["stdout", "tensorboard"])
@@ -145,18 +138,13 @@ def main():
         ),
 
         # training hyper-params
-<<<<<<< HEAD
-        learning_starts=MAX_EPISODE_STEPS*N_ENVS,     # ← wait until at least one episode is in the buffer: max_steps*num_envs
-        batch_size=256*N_ENVS,
-=======
         learning_starts=MAX_EPISODE_STEPS * N_ENVS,     # ← wait until at least one episode is in the buffer
         batch_size=256 * N_ENVS,                        # In-line with HER paper
->>>>>>> 7545712d51e3cb13058cefb518f17c076d0831cc
         train_freq=(1, "step"),
         gradient_steps=N_ENVS,                            # ← keeps updates decorrelated in vec setting
         gamma = 0.98,
         learning_rate=1e-3,
-        action_noise=action_noise,
+        #action_noise=action_noise,
         verbose=1,
         seed=SEED,
         tensorboard_log=LOG_DIR,
