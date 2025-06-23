@@ -1,24 +1,37 @@
 # Updated and advanced train.py that includes logging, vectorized environments, and periodic recorded evaluations
+
+# Basic Imports
 import os
 import numpy as np
 from datetime import datetime
 
+# RL Interface
 import gymnasium as gym
+from gymnasium.wrappers import TimeLimit # Not needed: RecordEpisodeStatistics, SB3 Monitor instead
 
+# Franka Environments
 from panda_mujoco_gym.envs.push import FrankaPushEnv
-from gymnasium.wrappers import TimeLimit, RecordEpisodeStatistics
 
+# Vectorized environments
+from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
+from stable_baselines3.common.vec_env import VecNormalize
+
+# Algo
 from stable_baselines3 import SAC
+from stable_baselines3.common.utils import set_random_seed
+from stable_baselines3.common.noise import NormalActionNoise
+
+# HER
 from stable_baselines3.her import HerReplayBuffer
 from stable_baselines3.her.goal_selection_strategy import GoalSelectionStrategy
-from stable_baselines3.common.noise import NormalActionNoise
-from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv, VecVideoRecorder
+
+# Eval
+# from stable_baselines3.common.monitor import Monitor # make_env or make_vec_env automatically loads monitor internally
+from stable_baselines3.common.vec_env import VecVideoRecorder
 from stable_baselines3.common.callbacks import EvalCallback, StopTrainingOnNoModelImprovement
-from stable_baselines3.common.utils import set_random_seed
 from stable_baselines3.common.logger import configure
 
-# ----------  CONFIG  ----------
+# ----------  CONFIG  ---------- TODO: use flags to set these more flexibly across all algos/settings.
 ENV_ID = "FrankaPushSparse-v0"
 
 SEED = 42
@@ -38,7 +51,6 @@ N_EVAL_EPISODES = 15
 LOG_DIR = f"/home/student/data/franka_baselines/push/SAC/franka_push_sac_{DATETIME.strftime('%Y-%m-%d_%H:%M:%S')}"
 VIDEO_FOLDER = os.path.join(LOG_DIR, "videos")
 BEST_MODEL_PATH = os.path.join(LOG_DIR, "best_model")
-
 # --------------------------------
 
 # --------  HELPERS  ------------
@@ -64,7 +76,6 @@ def make_env(rank: int, seed: int = 0, render: bool = False):
         # Collect per-env episode statistics  env = RecordEpisodeStatistics(env)
 
         # Adavned eval stat        env = Monitor(env)
-
         # Different seed per each worker
         env.reset(seed=seed + rank)
         
@@ -83,16 +94,27 @@ def main():
     
     # Initializes parallel training environments with different seeds
     vec_train_env = SubprocVecEnv([make_env(i, seed=42) for i in range(N_ENVS)])
+    vec_train_env = VecNormalize(vec_train_env, norm_obs=True, norm_reward = True) # clip_obs? clip_reward? gamma?
 
     # Only 1 env for video recording
     eval_env = DummyVecEnv([make_env(rank=0, seed=SEED + 10, render=True)])
-    #eval_env = VecVideoRecorder(
-    #    eval_env,
-    #    VIDEO_FOLDER,
-    #    record_video_trigger=lambda step: step % EVAL_FREQ == 0,
-    #    video_length=MAX_EPISODE_STEPS,
-    #    name_prefix="eval-video"
-    #)
+
+    # Eval env needs VecNormalize if train used it to keep same scale. Do not use these results to change train statistics, hence set training=False.
+    eval_env = VecNormalize(eval_env, norm_obs=True, norm_reward=False, training=False)
+    
+    # Copy the normalization statistics (running mean and standard_deviation --rms-- for observation and rewards (they won't change based on eval given training=False). This will help us have eval runs that are normalized as with training for consistency.
+    eval_env.obs_rms = vec_train_env.obs_rms
+    eval_env.ret_rms = vec_train_env.ret_rms
+
+    
+    # Recording
+    # eval_env = VecVideoRecorder(
+    #     eval_env,
+    #     VIDEO_FOLDER,
+    #     record_video_trigger=lambda step: step % EVAL_FREQ == 0,
+    #     video_length=MAX_EPISODE_STEPS,
+    #     name_prefix="eval-video"
+    # )
 
     # === Logger ===
     new_logger = configure(LOG_DIR, ["stdout", "tensorboard"])
@@ -116,8 +138,8 @@ def main():
         ),
 
         # training hyper-params
-        learning_starts=MAX_EPISODE_STEPS*N_ENVS,     # ← wait until at least one episode is in the buffer: max_steps*num_envs
-        batch_size=1024,
+        learning_starts=MAX_EPISODE_STEPS * N_ENVS,     # ← wait until at least one episode is in the buffer
+        batch_size=256 * N_ENVS,                        # In-line with HER paper
         train_freq=(1, "step"),
         gradient_steps=N_ENVS,                            # ← keeps updates decorrelated in vec setting
         gamma = 0.98,
