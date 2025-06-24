@@ -10,6 +10,7 @@ import gymnasium as gym
 from datetime import datetime
 
 from panda_mujoco_gym.envs.push import FrankaPushEnv
+from gymnasium.wrappers import TimeLimit
 
 from stable_baselines3 import SAC
 from stable_baselines3.her import HerReplayBuffer
@@ -23,7 +24,7 @@ from stable_baselines3.common.logger import configure
 ENV_ID = "FrankaPushSparse-v0"
 
 SEED = random.randint(1, 1000)
-TOTAL_TIMESTEPS = 250_000
+TOTAL_TIMESTEPS = 500_000
 MAX_EPISODE_STEPS = 75
 DATETIME = datetime.now()
 
@@ -38,9 +39,11 @@ BEST_MODEL_PATH = os.path.join(LOG_DIR, "best_model")
 
 # ------------- Create Environment -------------
 train_env = gym.make(ENV_ID, render_mode='rgb_array')
+train_env = TimeLimit(train_env, max_episode_steps=MAX_EPISODE_STEPS)
 train_env = Monitor(train_env)
 
 eval_env = gym.make(ENV_ID, render_mode='rgb_array')
+eval_env = TimeLimit(eval_env, max_episode_steps=MAX_EPISODE_STEPS)
 eval_env = Monitor(eval_env)
 
 
@@ -69,12 +72,12 @@ model = SAC(
     env=train_env,
     replay_buffer_class = HerReplayBuffer,
     replay_buffer_kwargs = dict(
-        n_sampled_goal = 8, 
+        n_sampled_goal = 4, 
         goal_selection_strategy = GoalSelectionStrategy.FUTURE,
 
         # Store full `info` dict w e/ transition.
         # HER only needs`"is_success" flag (and the dict in your case is empty beyond that). | **Keep False**. Comes at cost of mem without improved.
-        copy_info_dict = False,
+        copy_info_dict = True,
     ),
 
     # training hyper-params
