@@ -43,6 +43,10 @@ def main():
     env = FrankaPickAndPlaceEnv(reward_type="sparse", render_mode="human")
     env = TimeLimit(env, max_episode_steps=50)  
 
+    # Adjust physical settings
+    # env.model.opt.timestep = 0.001  # Smaller timestep for more accurate physics. Default is 0.002.
+    # env.model.opt.iterations = 100  # More solver iterations for better contact resolution. Default is 50.
+
     # Configuration parameters
     numItr = 50                    # Number of demonstration episodes to generate
     initStateSpace = "random"       # Initial state space configuration
@@ -71,7 +75,10 @@ def main():
                         acs = actions, 
                         obs = observations, 
                         rewards = rewards,
-                        info = infos)
+                        info = infos,
+                        terminateds = terminateds,
+                        truncateds = truncateds,
+                        dones = dones)
     
     print(f"Data saved to {fileName}.")
 
@@ -122,7 +129,11 @@ def pick_and_place_demo(env, lastObs):
 
     # pre_pick_offset
     pre_pick_offset = np.array([0,0,0.03], dtype=float)  # Offset to approach object safely (3cm)
-    error_threshold = 0.01  # Threshold for stopping condition (Xmm)
+    
+    # Error thresholds
+    error_threshold = 0.011  # Threshold for stopping condition (Xmm)
+
+
     finger_delta_fast = 0.05   # Action delta for fingers 7.5mm per step. 
     finger_delta_slow = 0.005   # Franka has a range from 0 to 4cm per finger
 
@@ -198,7 +209,7 @@ def pick_and_place_demo(env, lastObs):
     # Terminate when relative distance to object < 5mm
     print(f"----------------------------------------------- Phase 2: Grip -----------------------------------------------")
     error = object_pos - current_pos # remove offset
-    while (np.linalg.norm(error) >= error_threshold or fgr_pos>=0.04) and timeStep <= env._max_episode_steps: # Cube of width 4cm, each finger open to 2cm
+    while (np.linalg.norm(error) >= error_threshold or fgr_pos>=0.39) and timeStep <= env._max_episode_steps: # Cube of width 4cm, each finger open to 2cm
         env.render()
         
         # Initialize action vector [x, y, z, gripper]
@@ -208,7 +219,7 @@ def pick_and_place_demo(env, lastObs):
         action[:3] = error * Kp
         
         # Close gripper to grasp object
-        action[len(action)-1] = -finger_delta_fast  
+        action[len(action)-1] = -finger_delta_fast * 2
         
         # Execute action and collect data
         new_obs, reward, terminated, truncated, info = env.step(action)
@@ -228,7 +239,7 @@ def pick_and_place_demo(env, lastObs):
         fgr_pos = new_obs["observation"][6]  
         current_pos = new_obs["observation"][0:3]
         object_pos = new_obs['observation'][7:10]
-        error = object_pos - current_pos 
+        error = object_pos - current_pos - np.array([0.,0.,0.01]) # Grab lower
 
        # Print debug information
         print(
@@ -287,54 +298,54 @@ def pick_and_place_demo(env, lastObs):
                 f"Action: {np.array2string(action, precision=3)}"
                 )    
     
-    # Phase 4: Maintain Position
-    # Hold final position until episode completion
-    # Continue until maximum episode steps reached
-    print(f"----------------------------------------------- Phase 4: Maintain Position -----------------------------------------------")
-    while True:
-        env.render()
+    # # Phase 4: Maintain Position
+    # # Hold final position until episode completion
+    # # Continue until maximum episode steps reached
+    # print(f"----------------------------------------------- Phase 4: Maintain Position -----------------------------------------------")
+    # while True:
+    #     env.render()
         
-        # Zero motion command
-        action = np.array([0., 0., 0., 0.])
-        #action[len(action)-1] = -0.005  # Keep gripper closed
-        action[:3] = error * Kp
+    #     # Zero motion command
+    #     action = np.array([0., 0., 0., 0.])
+    #     #action[len(action)-1] = -0.005  # Keep gripper closed
+    #     action[:3] = error * Kp
         
-        # Execute action and collect data
-        new_obs, reward, terminated, truncated, info = env.step(action)
-        done = terminated or truncated
-        timeStep += 1
+    #     # Execute action and collect data
+    #     new_obs, reward, terminated, truncated, info = env.step(action)
+    #     done = terminated or truncated
+    #     timeStep += 1
         
-        # Store episode data
-        episodeObs.append(new_obs)
-        episodeRews.append(reward)
-        episodeAcs.append(action)
-        episodeInfo.append(info)
-        episodeTerminated.append(terminated)
-        episodeTruncated.append(truncated)
-        episodeDones.append(done)        
+    #     # Store episode data
+    #     episodeObs.append(new_obs)
+    #     episodeRews.append(reward)
+    #     episodeAcs.append(action)
+    #     episodeInfo.append(info)
+    #     episodeTerminated.append(terminated)
+    #     episodeTruncated.append(truncated)
+    #     episodeDones.append(done)        
         
-        # Update state information
-        object_pos = new_obs['observation'][7:10]
-        current_pos = new_obs["observation"][0:3]
-        object_pos = new_obs['observation'][7:10]
-        fgr_pos = new_obs["observation"][6]
-        error = goal - current_pos
+    #     # Update state information
+    #     object_pos = new_obs['observation'][7:10]
+    #     current_pos = new_obs["observation"][0:3]
+    #     object_pos = new_obs['observation'][7:10]
+    #     fgr_pos = new_obs["observation"][6]
+    #     error = goal - current_pos
 
-       # Print debug information
-        print(
-                f"Time Step: {timeStep}, Error: {np.linalg.norm(error):.4f}, "
-                f"Eff_pos: {np.array2string(current_pos, precision=3)}, "
-                f"obj_pos: {np.array2string(object_pos, precision=3)}, "
-                f"goal_pos: {np.array2string(goal, precision=3)}, "
-                f"fgr_pos: {np.array2string(fgr_pos, precision=2)}, "
-                f"Error: {np.array2string(error, precision=3)}, "
-                f"Action: {np.array2string(action, precision=3)}"
-                )       
+    #    # Print debug information
+    #     print(
+    #             f"Time Step: {timeStep}, Error: {np.linalg.norm(error):.4f}, "
+    #             f"Eff_pos: {np.array2string(current_pos, precision=3)}, "
+    #             f"obj_pos: {np.array2string(object_pos, precision=3)}, "
+    #             f"goal_pos: {np.array2string(goal, precision=3)}, "
+    #             f"fgr_pos: {np.array2string(fgr_pos, precision=2)}, "
+    #             f"Error: {np.array2string(error, precision=3)}, "
+    #             f"Action: {np.array2string(action, precision=3)}"
+    #             )       
 
     
-        # Episode termination condition
-        if timeStep >= env._max_episode_steps:
-            break
+    #     # Episode termination condition
+    #     if timeStep >= env._max_episode_steps:
+    #         break
     
     # Store complete episode data in global lists
     actions.append(episodeAcs)
