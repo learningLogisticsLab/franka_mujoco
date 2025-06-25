@@ -66,7 +66,7 @@ def deactivate_weld(env, constraint_name="grasp_weld"):
     
     try:
         # Deactivate the weld constraint
-        env.model.eq(constraint_name).active = 0    
+        env.unwrapped.model.eq(constraint_name).active = 0    
         print("Deactivated weld")    
         return True
     
@@ -115,7 +115,7 @@ def main():
             print("Episode completed successfully!")
             print(f"Total successful demos: {num_demos}/{attempted_demos}")
     
-    ## WRite data
+    ## Write data
     # 1. Get the absolute path of this script
     script_path = os.path.abspath(__file__)
 
@@ -311,7 +311,7 @@ def pick_and_place_demo(env, lastObs):
                 f"Error: {np.array2string(error, precision=3)}, "
                 f"Action: {np.array2string(action, precision=3)}"
                 )    
-        sleep(0.5)  # Optional: Slow down for better visualization
+        #sleep(0.5)  # Optional: Slow down for better visualization
     
     # Phase 3: Transport to Goal
     # Move grasped object to desired goal position
@@ -388,6 +388,9 @@ def pick_and_place_demo(env, lastObs):
             # Deactivate weld constraint after successful pick
             if weld_flag:
                 deactivate_weld(env, constraint_name="grasp_weld")
+
+            # Close mujoco viewer
+            env.close()
 
             # Break out of the loop to start a new episode
             return True
