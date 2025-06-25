@@ -1,4 +1,18 @@
 <mujoco model="panda">
+  
+  <!-- Friction attributes defined to facilitate picks: -->
+  <!-- frictional cone: switch from default “pyramidal” to "elliptic" -->
+  <!-- impratio:makes friction boundaries “harder” without raising μ -->
+  <!-- noslip: leave at 0 unless you enable noslip -->
+  <!-- TODO: (having trouble setting this) enable multi‐point continuous‐collision detection so that mujoco finds all contact points on your fingertips, not just one, useful for pinch grasps.-->
+  <!-- TODO: (having trouble setting this) enable MuJoCo’s native CCD as a fallback -->   
+  <option
+    cone="elliptic"        
+    impratio="10"          
+    noslip_iterations="0"  
+  />
+  
+    <!-- … rest of your assets, worldbody, etc. … -->
     <compiler angle="radian" meshdir="meshes"/>
     <default>
       <default class="panda">
@@ -12,23 +26,24 @@
         <default class="visual">
           <geom type="mesh" contype="0" conaffinity="0" group="2"/>
         </default>
-
+        
         <default class="collision">
           <geom type="mesh" group="3" condim="3"/>
+          <!-- In fingertip pads: change condim to 6 to include both torsional and rolling friction and change those parameters. friction params are: sliding friction, torsional friction, rolling fricting -->
           <default class="fingertip_pad_collision_1">
-            <geom type="box" size="0.0085 0.004 0.0085" pos="0 0.0055 0.0445" condim="3" friction="50.0 1.0 0.8"/> <!-- sliding friction, torsional friction, rolling fricting -->
+            <geom type="box" size="0.0085 0.004 0.0085" pos="0 0.0055 0.0445" condim="6" friction="45.0 1.0 0.8"/> 
           </default>
           <default class="fingertip_pad_collision_2">
-            <geom type="box" size="0.003 0.002 0.003" pos="0.0055 0.002 0.05" condim="3" friction="50.0 1.0 0.8"/>
+            <geom type="box" size="0.003 0.002 0.003" pos="0.0055 0.002 0.05" condim="6" friction="45.0 1.0 0.8"/>
           </default>
           <default class="fingertip_pad_collision_3">
-            <geom type="box" size="0.003 0.002 0.003" pos="-0.0055 0.002 0.05" condim="3" friction="50.0 1.0 0.8"/>
+            <geom type="box" size="0.003 0.002 0.003" pos="-0.0055 0.002 0.05" condim="6" friction="45.0 1.0 0.8"/>
           </default>
           <default class="fingertip_pad_collision_4">
-            <geom type="box" size="0.003 0.002 0.0035" pos="0.0055 0.002 0.0395" condim="3" friction="50.0 1.0 0.8"/>
+            <geom type="box" size="0.003 0.002 0.0035" pos="0.0055 0.002 0.0395" condim="6" friction="45.0 1.0 0.8"/>
           </default>
           <default class="fingertip_pad_collision_5">
-            <geom type="box" size="0.003 0.002 0.0035" pos="-0.0055 0.002 0.0395" condim="3" friction="50.0 1.0 0.8"/>
+            <geom type="box" size="0.003 0.002 0.0035" pos="-0.0055 0.002 0.0395" condim="6" friction="45.0 1.0 0.8"/>
           </default>
         </default>
       </default>
