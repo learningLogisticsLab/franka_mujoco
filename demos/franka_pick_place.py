@@ -29,7 +29,49 @@ terminateds = []    # List storing terminated flags for each episode
 truncateds = []     # List storing truncated flags for each episode
 dones = []          # List storing done flags (terminated or truncated) for each episode
 
+# Robot configuration
 robot = 'franka'    # Robot type used in the environment, can be 'franka' or 'fetch'
+
+# Weld constraint flag
+weld_flag = True    # Flag to activate weld constraint during pick-and-place
+
+
+def activate_weld(env, constraint_name="grasp_weld"):
+    """
+    Activate a weld constraint during pick portion of a demo
+    :param env: The environment containing the model
+    :param constraint_name: The name of the weld constraint to activate
+    :return: True if the weld was successfully activated, False if the constraint was not found
+    """
+
+    try:
+        # Activate the weld constraint
+        env.unwrapped.model.eq(constraint_name).active = 1     
+        print("Activated weld")   
+        return True
+    
+    except KeyError:
+        print(f"Warning: Constraint '{constraint_name}' not found")
+        return False
+
+def deactivate_weld(env, constraint_name="grasp_weld"):
+    """
+    Deactivate a weld constraint during place portion of a demo
+    :param env: The environment containing the model
+    :param constraint_name: The name of the weld constraint to deactivate
+    :return: True if the weld was successfully deactivated, False if the constraint was not
+    found
+    """ 
+    
+    try:
+        # Deactivate the weld constraint
+        env.model.eq(constraint_name).active = 0    
+        print("Deactivated weld")    
+        return True
+    
+    except KeyError:
+        print(f"Warning: Constraint '{constraint_name}' not found")
+        return False
 
 def main():
     """
@@ -48,25 +90,34 @@ def main():
     # env.model.opt.iterations = 100  # More solver iterations for better contact resolution. Default is 50.
 
     # Configuration parameters
-    numItr = 50                    # Number of demonstration episodes to generate
     initStateSpace = "random"       # Initial state space configuration
+
+    # Demos configs
+    attempted_demos = 10  # Number of demonstration episodes to generate   
+    num_demos = 0         # Counter for successful demonstration episodes 
     
-    # Reset environment to initial state
+    # Reset environment to initial state - render for the first time.
     obs, _ = env.reset()
     print("Reset!")
     
     # Generate demonstration episodes
-    while len(actions) < numItr:
-        obs,_ = env.reset()
-        print("ITERATION NUMBER ", len(actions))
+    while len(actions) < attempted_demos:
+        obs,_ = env.reset() # Reset environment for new episode
+        print("Demo: #", len(actions)+1)
 
         # Execute pick-and-place task
-        pick_and_place_demo(env, obs)
+        res = pick_and_place_demo(env, obs)
+
+        # Print success message
+        if res:                        
+            num_demos += 1
+            print("Episode completed successfully!")
+            print(f"Total successful demos: {num_demos}/{attempted_demos}")
     
     # Create output filename with configuration details
     fileName = "data_" + robot
     fileName += "_" + initStateSpace
-    fileName += "_" + str(numItr)
+    fileName += "_" + str(attempted_demos)
     fileName += ".npz"
     
     # Save collected data to compressed numpy NPZ file
@@ -133,8 +184,7 @@ def pick_and_place_demo(env, lastObs):
     # Error thresholds
     error_threshold = 0.011  # Threshold for stopping condition (Xmm)
 
-
-    finger_delta_fast = 0.05   # Action delta for fingers 7.5mm per step. 
+    finger_delta_fast = 0.05    # Action delta for fingers 5cm per step (will get clipped by controller)... more of a scalar. 
     finger_delta_slow = 0.005   # Franka has a range from 0 to 4cm per finger
 
     ## Extract data
@@ -239,7 +289,7 @@ def pick_and_place_demo(env, lastObs):
         fgr_pos = new_obs["observation"][6]  
         current_pos = new_obs["observation"][0:3]
         object_pos = new_obs['observation'][7:10]
-        error = object_pos - current_pos - np.array([0.,0.,0.01]) # Grab lower
+        error = object_pos - current_pos #- np.array([0.,0.,0.01]) # Grab lower
 
        # Print debug information
         print(
@@ -256,14 +306,21 @@ def pick_and_place_demo(env, lastObs):
     # Move grasped object to desired goal position
     # Terminate when distance between object and goal < 1cm
     print(f"----------------------------------------------- Phase 3: Transport to Goal -----------------------------------------------")
-    error = goal - current_pos
-    while np.linalg.norm(error) >= 0.01 and timeStep <= env._max_episode_steps:
+
+    # Weld activation
+    if weld_flag:
+        activate_weld(env, constraint_name="grasp_weld")
+
+    # Set error between goal and hand assuming the object is grasped
+    gh_error = goal - current_pos        # Error between goal and hand position
+    ho_error = object_pos - current_pos  # Error between object and hand position
+    while np.linalg.norm(gh_error) >= 0.01 and timeStep <= env._max_episode_steps:
         env.render()
         
         action = np.array([0., 0., 0., 0.])
         
         # Proportional control toward goal position
-        action[:3] = error[:3] * Kp
+        action[:3] = gh_error[:3] * Kp
         
         # Maintain grip on object
         #action[len(action)-1] = 0  
@@ -286,77 +343,48 @@ def pick_and_place_demo(env, lastObs):
         fgr_pos = new_obs["observation"][6] 
         current_pos = new_obs["observation"][0:3]
         object_pos = new_obs['observation'][7:10]
-        error = goal - current_pos
+        gh_error = goal - current_pos        # Error between goal and hand position
+        ho_error = object_pos - current_pos  # Error between object and hand position
 
-       # Print debug information
+        # Print debug information
         print(
-                f"Time Step: {timeStep}, Error: {np.linalg.norm(error):.4f}, "
+                f"Time Step: {timeStep}, Error Norm: {np.linalg.norm(gh_error):.4f}, "
                 f"Eff_pos: {np.array2string(current_pos, precision=3)}, "
                 f"goal_pos: {np.array2string(goal, precision=3)}, "
                 f"fgr_pos: {np.array2string(fgr_pos, precision=2)}, "
-                f"Error: {np.array2string(error, precision=3)}, "
+                f"Error: {np.array2string(gh_error, precision=3)}, "
                 f"Action: {np.array2string(action, precision=3)}"
                 )    
     
-    # # Phase 4: Maintain Position
-    # # Hold final position until episode completion
-    # # Continue until maximum episode steps reached
-    # print(f"----------------------------------------------- Phase 4: Maintain Position -----------------------------------------------")
-    # while True:
-    #     env.render()
-        
-    #     # Zero motion command
-    #     action = np.array([0., 0., 0., 0.])
-    #     #action[len(action)-1] = -0.005  # Keep gripper closed
-    #     action[:3] = error * Kp
-        
-    #     # Execute action and collect data
-    #     new_obs, reward, terminated, truncated, info = env.step(action)
-    #     done = terminated or truncated
-    #     timeStep += 1
-        
-    #     # Store episode data
-    #     episodeObs.append(new_obs)
-    #     episodeRews.append(reward)
-    #     episodeAcs.append(action)
-    #     episodeInfo.append(info)
-    #     episodeTerminated.append(terminated)
-    #     episodeTruncated.append(truncated)
-    #     episodeDones.append(done)        
-        
-    #     # Update state information
-    #     object_pos = new_obs['observation'][7:10]
-    #     current_pos = new_obs["observation"][0:3]
-    #     object_pos = new_obs['observation'][7:10]
-    #     fgr_pos = new_obs["observation"][6]
-    #     error = goal - current_pos
+        sleep(0.5)  # Optional: Slow down for better visualization
 
-    #    # Print debug information
-    #     print(
-    #             f"Time Step: {timeStep}, Error: {np.linalg.norm(error):.4f}, "
-    #             f"Eff_pos: {np.array2string(current_pos, precision=3)}, "
-    #             f"obj_pos: {np.array2string(object_pos, precision=3)}, "
-    #             f"goal_pos: {np.array2string(goal, precision=3)}, "
-    #             f"fgr_pos: {np.array2string(fgr_pos, precision=2)}, "
-    #             f"Error: {np.array2string(error, precision=3)}, "
-    #             f"Action: {np.array2string(action, precision=3)}"
-    #             )       
+        ## Check for success and store episode data
+        gh_norm = np.linalg.norm(gh_error)
+        ho_nomr = np.linalg.norm(ho_error)
+        if  gh_norm < error_threshold and ho_nomr < error_threshold:
+        
+            # Store complete episode data in global lists only if we succeeded (avoid bad demos)
+            actions.append(episodeAcs)
+            observations.append(episodeObs)
+            infos.append(episodeInfo)
+            rewards.append(episodeRews)
 
+            # Optionally, also store the done/terminated/truncated flags globally if needed:
+            terminateds.append(episodeTerminated)
+            truncateds.append(episodeTruncated)
+            dones.append(episodeDones)    
+
+            # Deactivate weld constraint after successful pick
+            if weld_flag:
+                deactivate_weld(env, constraint_name="grasp_weld")
+
+            # Break out of the loop to start a new episode
+            return True
+        
+    # If we reach here, the episode was not successful
+    if weld_flag:
+        print("Failed to transport object to goal position. Deactivating weld.")
+        deactivate_weld(env, constraint_name="grasp_weld")
     
-    #     # Episode termination condition
-    #     if timeStep >= env._max_episode_steps:
-    #         break
-    
-    # Store complete episode data in global lists
-    actions.append(episodeAcs)
-    observations.append(episodeObs)
-    infos.append(episodeInfo)
-    rewards.append(episodeRews)
-
-    # Optionally, also store the done/terminated/truncated flags globally if needed:
-    terminateds.append(episodeTerminated)
-    truncateds.append(episodeTruncated)
-    dones.append(episodeDones)    
-
 if __name__ == "__main__":
     main()
