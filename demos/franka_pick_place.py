@@ -14,6 +14,7 @@ The controller uses a 4-phase hierarchical approach:
 
 Output: Compressed NPZ file containing action, observation, and info sequences
 """
+import os
 import numpy as np
 import gymnasium as gym
 from gymnasium.wrappers import TimeLimit
@@ -114,15 +115,25 @@ def main():
             print("Episode completed successfully!")
             print(f"Total successful demos: {num_demos}/{attempted_demos}")
     
-    # Create output filename with configuration details
+    ## WRite data
+    # 1. Get the absolute path of this script
+    script_path = os.path.abspath(__file__)
+
+    # 2. Extract its directory
+    script_dir = os.path.dirname(script_path)
+
+    # 3. Create output filename with configuration details
     fileName = "data_" + robot
     fileName += "_" + initStateSpace
     fileName += "_" + str(attempted_demos)
     fileName += ".npz"
+
+    # 3. Build a filename in that same directory
+    out_path = os.path.join(script_dir, fileName)    
     
     # Save collected data to compressed numpy NPZ file
     # Set acs,obs,info as keys in dict 
-    np.savez_compressed(fileName, 
+    np.savez_compressed(out_path, 
                         acs = actions, 
                         obs = observations, 
                         rewards = rewards,
