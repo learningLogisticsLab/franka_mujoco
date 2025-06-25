@@ -90,7 +90,7 @@ def main():
 
     # Create log environments
     os.makedirs(LOG_DIR, exist_ok=True)
-    os.makedirs(VIDEO_FOLDER, exist_ok=True)
+    #os.makedirs(VIDEO_FOLDER, exist_ok=True)
     
     # Initializes parallel training environments with different seeds
     vec_train_env = SubprocVecEnv([make_env(i, seed=42) for i in range(N_ENVS)])
@@ -124,8 +124,8 @@ def main():
     new_logger = configure(LOG_DIR, ["stdout", "tensorboard"])
 
     # === Action Noise ===
-    n_actions = vec_train_env.action_space.shape[0]
-    action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.01 * np.ones(n_actions))
+    #n_actions = vec_train_env.action_space.shape[0]
+    #action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.01 * np.ones(n_actions))
 
     # === Define Model ===
     model = SAC(

@@ -9,7 +9,7 @@ from datetime import datetime
 
 TIMESTEPS = 500_000
 DATETIME = datetime.now()
-LOG_DIR = f"/home/student/data/franka_baselines/push/SAC/franka_push_sac_{DATETIME.strftime('%Y-%m-%d_%H:%M:%S')}"
+LOG_DIR = f"/home/student/data/franka_baselines/push/SAC/franka_push_sac_test{DATETIME.strftime('%Y-%m-%d_%H:%M:%S')}"
 env = gym.make("FrankaPushSparse-v0")
 
 # SAC hyperparams:
@@ -32,4 +32,4 @@ model = SAC(
 
 # set step count and learn. Then save model.
 model.learn(TIMESTEPS)
-model.save(f"examples/slide/sac/sac_her_push_{int(step_count/1000)}k")
+model.save(f"/home/student/data/franka_baselines/push/SAC/models/franka_push_sac_test{DATETIME.strftime('%Y-%m-%d_%H:%M:%S')")
