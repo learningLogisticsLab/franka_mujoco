@@ -259,6 +259,9 @@ class FrankaEnv(MujocoRobotEnv):
 
     # custom methods
     # -----------------------------
+
+    # Welds
+    # The function resets the relative pose of the mocap welds to the default value.        
     def reset_mocap_welds(self, model, data) -> None:
         if model.nmocap > 0 and model.eq_data is not None:
             for i in range(model.eq_data.shape[0]):

@@ -36,8 +36,16 @@
           <geom name="obj_geom" mass="0.1" type="box" size="0.02 0.02 0.02" rgba="0 1 0 1" friction="1" condim="6"/>
           <site name="obj_site" pos="0 0 0" size="0.01" type="sphere"/>
       </body>
-  
     </worldbody>
-    
+
+    <equality>
+      <weld
+        name    ="grasp_weld"
+        body1   ="ee_center_body"
+        body2   ="obj"             
+        active  ="false"
+        solimp  ="0.9 0.95 0.001 0.5 2"
+        solref  ="0.02 1"
+      />
+    </equality>    
   </mujoco>
-  
