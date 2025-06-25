@@ -43,12 +43,12 @@ DATETIME = datetime.now()
 N_ENVS = 10 # number of parallel environments for training
 
 # Eval
-DESIRED_EVAL_FREQ = 25_000
+DESIRED_EVAL_FREQ = 10_000
 EVAL_FREQ = DESIRED_EVAL_FREQ // N_ENVS
 N_EVAL_EPISODES = 15
 
 # Logs
-LOG_DIR = f"/home/student/data/franka_baselines/push/SAC/franka_push_sac_{DATETIME.strftime('%Y-%m-%d_%H:%M:%S')}"
+LOG_DIR = f"/home/student/data/franka_baselines/push/SAC/franka_push_sac_vec_{DATETIME.strftime('%Y-%m-%d_%H:%M:%S')}"
 VIDEO_FOLDER = os.path.join(LOG_DIR, "videos")
 BEST_MODEL_PATH = os.path.join(LOG_DIR, "best_model")
 # --------------------------------
@@ -90,21 +90,25 @@ def main():
 
     # Create log environments
     os.makedirs(LOG_DIR, exist_ok=True)
-    os.makedirs(VIDEO_FOLDER, exist_ok=True)
+    #os.makedirs(VIDEO_FOLDER, exist_ok=True)
     
     # Initializes parallel training environments with different seeds
     vec_train_env = SubprocVecEnv([make_env(i, seed=42) for i in range(N_ENVS)])
-    vec_train_env = VecNormalize(vec_train_env, norm_obs=True, norm_reward = True) # clip_obs? clip_reward? gamma?
+    # Removed VecNormalize because it expects to env.step() to return (obs, reward, done, info) which was used in gym, instead of 
+    # the newer (obs, reward, terminated, truncated, info) which gymnasium returns.
+    #vec_train_env = VecNormalize(vec_train_env, norm_obs=True, norm_reward = True) # clip_obs? clip_reward? gamma?
 
     # Only 1 env for video recording
     eval_env = DummyVecEnv([make_env(rank=0, seed=SEED + 10, render=True)])
 
     # Eval env needs VecNormalize if train used it to keep same scale. Do not use these results to change train statistics, hence set training=False.
-    eval_env = VecNormalize(eval_env, norm_obs=True, norm_reward=False, training=False)
+    # Removed for same reason as above
+    #eval_env = VecNormalize(eval_env, norm_obs=True, norm_reward=False, training=False)
     
     # Copy the normalization statistics (running mean and standard_deviation --rms-- for observation and rewards (they won't change based on eval given training=False). This will help us have eval runs that are normalized as with training for consistency.
-    eval_env.obs_rms = vec_train_env.obs_rms
-    eval_env.ret_rms = vec_train_env.ret_rms
+    # part of VecNormalize so commented out
+    #eval_env.obs_rms = vec_train_env.obs_rms
+    #eval_env.ret_rms = vec_train_env.ret_rms
 
     
     # Recording
@@ -120,8 +124,8 @@ def main():
     new_logger = configure(LOG_DIR, ["stdout", "tensorboard"])
 
     # === Action Noise ===
-    n_actions = vec_train_env.action_space.shape[0]
-    action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.01 * np.ones(n_actions))
+    #n_actions = vec_train_env.action_space.shape[0]
+    #action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.01 * np.ones(n_actions))
 
     # === Define Model ===
     model = SAC(
@@ -134,7 +138,7 @@ def main():
 
             # Store full `info` dict w e/ transition.
             # HER only needs`"is_success" flag (and the dict in your case is empty beyond that). | **Keep False**. Comes at cost of mem without improved.
-            copy_info_dict = False,
+            copy_info_dict = True,
         ),
 
         # training hyper-params
