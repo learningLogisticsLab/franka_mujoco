@@ -9,7 +9,7 @@ import numpy as np
 import gymnasium as gym
 from datetime import datetime
 
-from panda_mujoco_gym.envs.push import FrankaPushEnv
+from panda_mujoco_gym.envs.slide import FrankaSlideEnv
 from gymnasium.wrappers import TimeLimit
 
 from stable_baselines3 import SAC
@@ -21,10 +21,10 @@ from stable_baselines3.common.callbacks import EvalCallback, StopTrainingOnNoMod
 from stable_baselines3.common.logger import configure
 
 # ----------  CONFIG  ----------
-ENV_ID = "FrankaPushSparse-v0"
+ENV_ID = "FrankaSlideSparse-v0"
 
 SEED = random.randint(1, 1000)
-TOTAL_TIMESTEPS = 500_000
+TOTAL_TIMESTEPS = 1_000_000
 MAX_EPISODE_STEPS = 75
 DATETIME = datetime.now()
 
@@ -33,7 +33,7 @@ EVAL_FREQ = 5_000
 N_EVAL_EPISODES = 15
 
 # Logs
-LOG_DIR = f"/home/student/data/franka_baselines/push/SAC/franka_push_sac_single{DATETIME.strftime('%Y-%m-%d_%H:%M:%S')}"
+LOG_DIR = f"/home/student/data/franka_baselines/slide/SAC/franka_slide_sac_single_eval{DATETIME.strftime('%Y-%m-%d_%H:%M:%S')}"
 VIDEO_FOLDER = os.path.join(LOG_DIR, "videos")
 BEST_MODEL_PATH = os.path.join(LOG_DIR, "best_model")
 
