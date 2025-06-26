@@ -142,10 +142,15 @@ def main():
     N_EVAL_EPISODES = 15
 
     # Logs
+    metric = "franka_baselines"
+    task = "pick_n_place"
+    algo = "SAC"
     log_file = get_demo_path("")
-    LOG_DIR = log_file + f"/franka_pick_n_place_sac_single_demo_{DATETIME.strftime('%Y-%m-%d_%H:%M:%S')}"
-    VIDEO_FOLDER = os.path.join(LOG_DIR, "videos")
+    base = f"/home/student/data"
+
+    LOG_DIR = f"{base}/{metric}/{task}/{algo}/franka_pick_n_place_sac_single_demo_{DATETIME.strftime('%Y-%m-%d_%H:%M:%S')}"
     BEST_MODEL_PATH = os.path.join(LOG_DIR, "best_model")
+    #VIDEO_FOLDER = os.path.join(LOG_DIR, "videos")
 
     # ------------- Create Environment -------------
     train_env = gym.make(ENV_ID, render_mode='rgb_array')
