@@ -115,12 +115,13 @@ def main():
             print("Episode completed successfully!")
             print(f"Total successful demos: {num_demos}/{attempted_demos}")
     
-    ## Write data
+    ## Write data to demos folder
     # 1. Get the absolute path of this script
-    script_path = os.path.abspath(__file__)
+    #script_path = os.path.abspath(__file__)
 
     # 2. Extract its directory
-    script_dir = os.path.dirname(script_path)
+    #script_dir = os.path.dirname(script_path)
+    script_dir = '~/data/franka_baselines/demos/pick_n_place' # Assumes data folder in user directory.
 
     # 3. Create output filename with configuration details
     fileName = "data_" + robot

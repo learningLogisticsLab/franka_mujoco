@@ -187,47 +187,47 @@ def main():
         env=train_env,
         replay_buffer_class = HerReplayBuffer,
         replay_buffer_kwargs = dict(
-            n_sampled_goal = 4, 
+            n_sampled_goal = 8, 
             goal_selection_strategy = GoalSelectionStrategy.FUTURE,
             #online_sampling = True,  # ← use online sampling for HER -- was for old gym not gymnasium
             
             # Store full `info` dict w e/ transition.
             # HER only needs`"is_success" flag (and the dict in your case is empty beyond that). | **Keep False**. Comes at cost of mem without improved.
-            copy_info_dict = True,
+            #copy_info_dict = True,
         ),
 
         # training hyper-params
-        learning_starts=MAX_EPISODE_STEPS,          # ← wait until at least one episode is in the buffer: max_steps*num_envs
-        batch_size=256,
-        train_freq=(1, "step"),
-        gradient_steps=1,                           # ← keeps updates decorrelated in vec setting
+        learning_starts = 0,          # Can start right away.
+        batch_size      = 256,
+        train_freq = (1, "step"),
+        gradient_steps = 1,                           # ← keeps updates decorrelated in vec setting
         gamma = 0.98,
-        learning_rate=1e-3,
+        learning_rate = 1e-3,
         
         #action_noise=action_noise,                 # ←  action noise not optimal for SAC, but can be used with other algorithms like DDPG
-        verbose=1,
-        seed=SEED,
-        tensorboard_log=LOG_DIR,
+        verbose = 1,
+        seed = SEED,
+        tensorboard_log = LOG_DIR,
     )
     model.set_logger(new_logger)
 
     # === Evaluation Callback ===
     callback_on_best = StopTrainingOnNoModelImprovement(
-        max_no_improvement_evals=5,
-        min_evals=3,
+        max_no_improvement_evals = 5, # Stop training if no improvement after 5 evaluations
+        min_evals = 3,                # Minimum number of evaluations before stopping
         verbose=1,
     )
 
     eval_callback = EvalCallback(
         eval_env,
-        eval_freq=EVAL_FREQ,
-        n_eval_episodes=N_EVAL_EPISODES,
-        deterministic=True,
-        render=False,
-        best_model_save_path=BEST_MODEL_PATH,
-        callback_on_new_best=callback_on_best,
-        log_path=LOG_DIR,                              
-        verbose=1,
+        eval_freq = EVAL_FREQ,
+        n_eval_episodes = N_EVAL_EPISODES,
+        deterministic = True,
+        render = False,
+        best_model_save_path = BEST_MODEL_PATH,
+        callback_on_new_best = callback_on_best,
+        log_path = LOG_DIR,                              
+        verbose = 1,
     )
 
     # === Load Demos ===
