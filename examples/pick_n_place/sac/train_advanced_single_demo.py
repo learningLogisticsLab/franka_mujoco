@@ -233,8 +233,8 @@ def main():
     # === Load Demos ===
 
     # Get abs path to demo file
-    script_dir = '~/data/franka_baselines/demos/pick_n_place'
-    demo_file = get_demo_path(f"{script_dir}/data_franka_random_20.npz")
+    script_dir = '/home/student/data/franka_baselines/demos/pick_n_place'
+    demo_file = f"{script_dir}/data_franka_random_20.npz"
 
     # Load the demo file into the HER buffer: mutated model.replay_buffer will persist. 
     load_demos_to_her_buffer_gymnasium(model,demo_file, combine_done=True)
