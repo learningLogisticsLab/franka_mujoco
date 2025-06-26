@@ -150,7 +150,7 @@ def main():
 
     LOG_DIR = f"{base}/{metric}/{task}/{algo}/franka_pick_n_place_sac_single_demo_{DATETIME.strftime('%Y-%m-%d_%H:%M:%S')}"
     BEST_MODEL_PATH = os.path.join(LOG_DIR, "best_model")
-    #VIDEO_FOLDER = os.path.join(LOG_DIR, "videos")
+    VIDEO_FOLDER = os.path.join(LOG_DIR, "videos")
 
     # ------------- Create Environment -------------
     train_env = gym.make(ENV_ID, render_mode='rgb_array')
@@ -193,7 +193,7 @@ def main():
             
             # Store full `info` dict w e/ transition.
             # HER only needs`"is_success" flag (and the dict in your case is empty beyond that). | **Keep False**. Comes at cost of mem without improved.
-            #copy_info_dict = True,
+            copy_info_dict = True,
         ),
 
         # training hyper-params
@@ -233,7 +233,8 @@ def main():
     # === Load Demos ===
 
     # Get abs path to demo file
-    demo_file = get_demo_path("../../../demos/data_franka_random_10.npz")
+    script_dir = '~/data/franka_baselines/demos/pick_n_place'
+    demo_file = get_demo_path(f"{script_dir}/data_franka_random_20.npz")
 
     # Load the demo file into the HER buffer: mutated model.replay_buffer will persist. 
     load_demos_to_her_buffer_gymnasium(model,demo_file, combine_done=True)

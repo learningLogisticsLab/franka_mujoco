@@ -83,7 +83,7 @@ def main():
     to compressed NPZ file for use with stable-baselines3.
     """
     # Initialize Fetch pick-and-place environment
-    env = FrankaPickAndPlaceEnv(reward_type="sparse", render_mode="human")
+    env = FrankaPickAndPlaceEnv(reward_type="sparse", render_mode="rgb_array")
     env = TimeLimit(env, max_episode_steps=50)  
 
     # Adjust physical settings
@@ -94,7 +94,8 @@ def main():
     initStateSpace = "random"       # Initial state space configuration
 
     # Demos configs
-    attempted_demos = 10  # Number of demonstration episodes to generate   
+    attempted_demos = 1  # Number of demonstration episodes to generate--ADJUST THIS VALUE FOR MORE OR LESS DEMOS**  
+
     num_demos = 0         # Counter for successful demonstration episodes 
     
     # Reset environment to initial state - render for the first time.
@@ -104,6 +105,7 @@ def main():
     # Generate demonstration episodes
     while len(actions) < attempted_demos:
         obs,_ = env.reset() # Reset environment for new episode
+        print(f"We will run a total of: {attempted_demos} demos!!")
         print("Demo: #", len(actions)+1)
 
         # Execute pick-and-place task
@@ -121,7 +123,7 @@ def main():
 
     # 2. Extract its directory
     #script_dir = os.path.dirname(script_path)
-    script_dir = '~/data/franka_baselines/demos/pick_n_place' # Assumes data folder in user directory.
+    script_dir = '/home/student/data/franka_baselines/demos/pick_n_place' # Assumes data folder in user directory.
 
     # 3. Create output filename with configuration details
     fileName = "data_" + robot
