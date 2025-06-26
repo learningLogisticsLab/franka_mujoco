@@ -27,12 +27,29 @@ Create a virtual environment for python 3.10:
 ```
 conda create --name fm_env python==3.10
 ```
+### Activate your environment:
+```
+conda activate fm_env
+```
 
 And now set python interpreter paths and install dependencies
 ```
 cd franka_mujoco
 pip install -e .
 pip install -r requirements.txt
+```
+
+### Create an fm_env alias
+For convenience, you can create an alias in your .bashrc/.zshrc file to quickly load the environment and cd to a desired folder:
+```
+gedit ~/.bashrc # or gedit ~/.zshrc
+
+# Go to the last line and type
+alias fm_env="conda activate fm_env; cd ~/code/franka_mujoco"
+# Save and exit your file
+
+# Activate new .bashrc file by calling the following command in your terminal
+source .bashrc # or source .zshrc
 ```
 
 ## Test
