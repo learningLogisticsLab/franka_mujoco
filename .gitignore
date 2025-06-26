@@ -3,6 +3,7 @@
 .pytest_cache
 .DS_Store
 .zip
+.npz # numpy compressed files
 *__pycache__
 trained_model/
 test_model/
