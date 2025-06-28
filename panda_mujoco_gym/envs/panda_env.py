@@ -207,6 +207,8 @@ class FrankaEnv(MujocoRobotEnv):
                         object_velr,
                     ]
                 ).copy(),
+
+                # Moving the object to the goal is our target. So, set this as the achieved goal.
                 "achieved_goal": object_position.copy(),
                 "desired_goal": self.goal.copy(),
             }
