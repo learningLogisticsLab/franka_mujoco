@@ -123,7 +123,9 @@ def main():
 
     # 2. Extract its directory
     #script_dir = os.path.dirname(script_path)
-    script_dir = '/home/student/data/franka_baselines/demos/pick_n_place' # Assumes data folder in user directory.
+    #script_dir = '/home/student/data/franka_baselines/demos/pick_n_place' # Assumes data folder in user directory.
+    script_dir = os.path.expanduser('~/data/franka_baselines/demos/pick_n_place')
+    os.makedirs(script_dir, exist_ok=True)
 
     # 3. Create output filename with configuration details
     fileName = "data_" + robot
