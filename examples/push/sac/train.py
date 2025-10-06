@@ -11,7 +11,7 @@ TIMESTEPS = 500_000
 DATETIME = datetime.now()
 LOG_DIR = f"/home/bison/code/franka_mujoco/logs/franka_baselines/push/SAC/franka_push_sac_test_{DATETIME.strftime('%Y-%m-%d_%H-%M-%S')}"
 
-env = gym.make("FrankaPushSparse-v0")
+env = gym.make("FrankaPushSparse-v0", render_mode='human') # to visualize use render_mode="human"
 
 # SAC hyperparams:
 model = SAC(
