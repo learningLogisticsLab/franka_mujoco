@@ -23,6 +23,11 @@ There is still a lot of work to be done on this repo, so please feel free to rai
 </div>
 
 ## Installation
+Clone the repo:
+```
+git clone https://github.com/learningLogisticsLab/franka_mujoco.git
+```
+
 Create a virtual environment for python 3.10:
 ```
 conda create --name fm_env python==3.10
